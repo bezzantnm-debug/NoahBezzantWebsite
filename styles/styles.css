@@ -1,0 +1,39 @@
+
+        body{ 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            
+        }
+        h1{ font-family: papyrus, 'Comic Sans MS', serif;}
+        p{
+            padding: 5px;
+            border: 2px solid blueviolet;
+            margin: 10px;
+        }
+        img{
+            padding: 4px;
+            margin: 10px;
+            border: 3px solid black;
+        }
+        .rizz{
+            font-family: chiller;
+            color: yellow;
+            background-color: fuchsia;
+            font-size: larger;
+            font-weight: bolder;
+            text-decoration: overline;
+            border: dashed 6px aqua;
+        }
+        .rizz:hover{
+            font-size: 200%;
+            text-decoration: line-through;
+            text-align: center;
+        }
+        li:hover{ 
+            background-color: lightblue;
+        }
+        a:visited{
+            color: red;
+        }
+        html{
+            background-color: lightblue;
+        }
