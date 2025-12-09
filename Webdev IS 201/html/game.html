@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <a href="../index2.html">Home</a>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPS Battle Simulator</title>
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-color: #ffffff;
+            --rock-color: #7f8c8d;
+            --paper-color: #f1c40f;
+            --scissor-color: #e74c3c;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000;
+            color: var(--text-color);
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Northern Lights Background */
+        .aurora-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(to bottom, #020111 10%, #191f3a 90%);
+            overflow: hidden;
+        }
+
+        .aurora {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(50, 255, 100, 0.1), transparent 60%),
+                radial-gradient(circle at 20% 30%, rgba(50, 200, 255, 0.15), transparent 50%),
+                conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(100, 255, 150, 0.2) 60deg, transparent 120deg);
+            filter: blur(40px);
+            animation: aurora-shift 20s infinite linear;
+            opacity: 0.6;
+        }
+
+        .aurora:nth-child(2) {
+            animation-duration: 35s;
+            animation-direction: reverse;
+            background: 
+                radial-gradient(circle at 80% 20%, rgba(150, 50, 255, 0.1), transparent 50%),
+                conic-gradient(from 180deg at 40% 60%, transparent 0deg, rgba(50, 255, 200, 0.15) 80deg, transparent 160deg);
+        }
+
+        @keyframes aurora-shift {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        /* UI Layout */
+        #ui-layer {
+            position: relative;
+            z-index: 10;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 80px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+            color: #aaa;
+        }
+
+        input[type="range"] {
+            width: 80px;
+            cursor: pointer;
+        }
+
+        .stats-box {
+            display: flex;
+            gap: 20px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            background: rgba(0,0,0,0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff00cc, #3333ff);
+            border: none;
+            padding: 8px 20px;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        /* Canvas */
+        #game-canvas {
+            flex-grow: 1;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* Victory Overlay */
+        #victory-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        #victory-screen.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .winner-title {
+            font-size: 4rem;
+            font-weight: 800;
+            text-shadow: 0 0 20px currentColor;
+            margin-bottom: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        .winner-subtitle {
+            font-size: 1.5rem;
+            color: #ddd;
+            margin-bottom: 30px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); text-shadow: 0 0 20px currentColor; }
+            50% { transform: scale(1.05); text-shadow: 0 0 40px currentColor; }
+            100% { transform: scale(1); text-shadow: 0 0 20px currentColor; }
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            #ui-layer {
+                flex-direction: column;
+                align-items: stretch;
+                max-height: 30vh;
+                overflow-y: auto;
+            }
+            .stats-box {
+                justify-content: center;
+                font-size: 1rem;
+            }
+            .control-group {
+                justify-content: space-around;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background -->
+    <div class="aurora-container">
+        <div class="aurora"></div>
+        <div class="aurora"></div>
+    </div>
+
+    <!-- UI -->
+    <div id="ui-layer">
+        <div class="stats-box">
+            <div class="stat-item" style="color: var(--rock-color);">🪨 <span id="rock-count">0</span></div>
+            <div class="stat-item" style="color: var(--paper-color);">📄 <span id="paper-count">0</span></div>
+            <div class="stat-item" style="color: var(--scissor-color);">✂️ <span id="scissor-count">0</span></div>
+        </div>
+
+        <div class="control-group">
+            <div class="slider-box">
+                <label>Rocks</label>
+                <input type="range" id="rock-input" min="3" max="10" value="5">
+            </div>
+            <div class="slider-box">
+                <label>Paper</label>
+                <input type="range" id="paper-input" min="3" max="10" value="5">
+            </div>
+            <div class="slider-box">
+                <label>Scissors</label>
+                <input type="range" id="scissor-input" min="3" max="10" value="5">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="slider-box">
+                <label>Speed</label>
+                <input type="range" id="speed-input" min="1" max="10" value="3">
+            </div>
+            <div class="slider-box">
+                <label>Size</label>
+                <input type="range" id="size-input" min="20" max="60" value="40">
+            </div>
+            <button onclick="game.init()">Restart Battle</button>
+        </div>
+    </div>
+
+    <canvas id="game-canvas"></canvas>
+
+    <div id="victory-screen">
+        <div class="winner-title" id="winner-text">ROCK WINS</div>
+        <div class="winner-subtitle">Total Domination</div>
+        <button onclick="game.init()">Play Again</button>
+    </div>
+
+    <script>
+        // Constants
+        const TYPE_ROCK = 0;
+        const TYPE_PAPER = 1;
+        const TYPE_SCISSOR = 2;
+        
+        const COLORS = {
+            [TYPE_ROCK]: '#7f8c8d',
+            [TYPE_PAPER]: '#f1c40f',
+            [TYPE_SCISSOR]: '#e74c3c'
+        };
+
+        const EMOJIS = {
+            [TYPE_ROCK]: '🪨',
+            [TYPE_PAPER]: '📄',
+            [TYPE_SCISSOR]: '✂️'
+        };
+
+        class Particle {
+            constructor(x, y, type, speedMultiplier, size) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.radius = size / 2;
+                this.mass = 1; // All same mass for fair bouncing
+                
+                // Random velocity vector
+                const angle = Math.random() * Math.PI * 2;
+                const speed = (Math.random() * 1.5 + 1) * speedMultiplier; 
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+            }
+
+            draw(ctx) {
+                // Glow effect
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = COLORS[this.type];
+                
+                // Circle body
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = COLORS[this.type];
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,0.3)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Emoji
+                ctx.shadowBlur = 0; // Reset shadow for text
+                ctx.fillStyle = "#fff";
+                ctx.font = `${this.radius * 1.2}px Arial`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(EMOJIS[this.type], this.x, this.y + (this.radius * 0.1));
+                
+                ctx.restore();
+            }
+
+            update(width, height) {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Wall collisions (Elastic)
+                if (this.x - this.radius < 0) {
+                    this.x = this.radius;
+                    this.vx *= -1;
+                } else if (this.x + this.radius > width) {
+                    this.x = width - this.radius;
+                    this.vx *= -1;
+                }
+
+                if (this.y - this.radius < 0) {
+                    this.y = this.radius;
+                    this.vy *= -1;
+                } else if (this.y + this.radius > height) {
+                    this.y = height - this.radius;
+                    this.vy *= -1;
+                }
+            }
+        }
+
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('game-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.animationId = null;
+                this.isRunning = false;
+                
+                // Inputs
+                this.inputs = {
+                    rock: document.getElementById('rock-input'),
+                    paper: document.getElementById('paper-input'),
+                    scissor: document.getElementById('scissor-input'),
+                    speed: document.getElementById('speed-input'),
+                    size: document.getElementById('size-input')
+                };
+
+                // Display
+                this.counts = {
+                    rock: document.getElementById('rock-count'),
+                    paper: document.getElementById('paper-count'),
+                    scissor: document.getElementById('scissor-count')
+                };
+
+                this.victoryScreen = document.getElementById('victory-screen');
+                this.winnerText = document.getElementById('winner-text');
+
+                // Resize observer
+                window.addEventListener('resize', () => this.resize());
+                this.resize();
+                
+                // Start
+                this.init();
+            }
+
+            resize() {
+                this.canvas.width = this.canvas.offsetWidth;
+                this.canvas.height = this.canvas.offsetHeight;
+            }
+
+            init() {
+                // Reset state
+                this.particles = [];
+                this.isRunning = true;
+                this.victoryScreen.classList.remove('active');
+                if (this.animationId) cancelAnimationFrame(this.animationId);
+
+                // Config values
+                const rCount = parseInt(this.inputs.rock.value);
+                const pCount = parseInt(this.inputs.paper.value);
+                const sCount = parseInt(this.inputs.scissor.value);
+                const speed = parseInt(this.inputs.speed.value);
+                const size = parseInt(this.inputs.size.value);
+
+                // Helper to spawn without overlap (simple retry mechanism)
+                const spawn = (type) => {
+                    let safe = false;
+                    let x, y, p;
+                    let attempts = 0;
+                    while(!safe && attempts < 100) {
+                        x = Math.random() * (this.canvas.width - size * 2) + size;
+                        y = Math.random() * (this.canvas.height - size * 2) + size;
+                        safe = true;
+                        for(let other of this.particles) {
+                            const dx = x - other.x;
+                            const dy = y - other.y;
+                            const dist = Math.sqrt(dx*dx + dy*dy);
+                            if(dist < size) safe = false;
+                        }
+                        attempts++;
+                    }
+                    this.particles.push(new Particle(x, y, type, speed, size));
+                };
+
+                for(let i=0; i<rCount; i++) spawn(TYPE_ROCK);
+                for(let i=0; i<pCount; i++) spawn(TYPE_PAPER);
+                for(let i=0; i<sCount; i++) spawn(TYPE_SCISSOR);
+
+                this.animate();
+            }
+
+            checkBattle(p1, p2) {
+                if (p1.type === p2.type) return;
+
+                // Determine winner
+                // 0 vs 1 (Rock vs Paper) -> Paper wins
+                // 1 vs 2 (Paper vs Scissor) -> Scissor wins
+                // 2 vs 0 (Scissor vs Rock) -> Rock wins
+                
+                let winner = null;
+                let loser = null;
+
+                if (p1.type === TYPE_ROCK) {
+                    if (p2.type === TYPE_PAPER) { winner = p2; loser = p1; }
+                    else if (p2.type === TYPE_SCISSOR) { winner = p1; loser = p2; }
+                } else if (p1.type === TYPE_PAPER) {
+                    if (p2.type === TYPE_ROCK) { winner = p1; loser = p2; }
+                    else if (p2.type === TYPE_SCISSOR) { winner = p2; loser = p1; }
+                } else if (p1.type === TYPE_SCISSOR) {
+                    if (p2.type === TYPE_ROCK) { winner = p2; loser = p1; }
+                    else if (p2.type === TYPE_PAPER) { winner = p1; loser = p2; }
+                }
+
+                if (winner && loser) {
+                    loser.type = winner.type;
+                }
+            }
+
+            resolveCollision(p1, p2) {
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const minDistance = p1.radius + p2.radius;
+
+                if (distance < minDistance) {
+                    // 1. Resolve Overlap (Static Resolution)
+                    const overlap = minDistance - distance;
+                    const nx = dx / distance;
+                    const ny = dy / distance;
+                    
+                    // Move particles apart so they don't stick
+                    p1.x -= nx * overlap * 0.5;
+                    p1.y -= ny * overlap * 0.5;
+                    p2.x += nx * overlap * 0.5;
+                    p2.y += ny * overlap * 0.5;
+
+                    // 2. Resolve Velocity (Elastic Collision)
+                    // Normal vector is n=(nx, ny)
+                    // Relative velocity
+                    const dvx = p2.vx - p1.vx;
+                    const dvy = p2.vy - p1.vy;
+                    
+                    // Velocity along normal
+                    const velAlongNormal = dvx * nx + dvy * ny;
+
+                    // Do not resolve if velocities are separating
+                    if (velAlongNormal > 0) return;
+
+                    // Impulse scalar (simplified for equal mass)
+                    const j = -(1 + 1) * velAlongNormal / 2; // restitution = 1 (elastic)
+
+                    // Apply impulse
+                    const impulseX = j * nx;
+                    const impulseY = j * ny;
+
+                    p1.vx -= impulseX;
+                    p1.vy -= impulseY;
+                    p2.vx += impulseX;
+                    p2.vy += impulseY;
+
+                    // 3. Battle Logic
+                    this.checkBattle(p1, p2);
+                }
+            }
+
+            animate() {
+                if (!this.isRunning) return;
+
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Update physics
+                for (let i = 0; i < this.particles.length; i++) {
+                    const p = this.particles[i];
+                    p.update(this.canvas.width, this.canvas.height);
+                }
+
+                // Check collisions (O(N^2) - acceptable for < 50 particles)
+                for (let i = 0; i < this.particles.length; i++) {
+                    for (let j = i + 1; j < this.particles.length; j++) {
+                        this.resolveCollision(this.particles[i], this.particles[j]);
+                    }
+                }
+
+                // Draw and Count
+                let r = 0, p = 0, s = 0;
+                for (let particle of this.particles) {
+                    particle.draw(this.ctx);
+                    if (particle.type === TYPE_ROCK) r++;
+                    else if (particle.type === TYPE_PAPER) p++;
+                    else if (particle.type === TYPE_SCISSOR) s++;
+                }
+
+                // Update UI
+                this.counts.rock.textContent = r;
+                this.counts.paper.textContent = p;
+                this.counts.scissor.textContent = s;
+
+                // Check Win Condition
+                const activeTypes = [r > 0, p > 0, s > 0].filter(Boolean).length;
+                
+                if (activeTypes === 1) {
+                    this.endGame(r > 0 ? TYPE_ROCK : p > 0 ? TYPE_PAPER : TYPE_SCISSOR);
+                } else {
+                    this.animationId = requestAnimationFrame(() => this.animate());
+                }
+            }
+
+            endGame(winnerType) {
+                this.isRunning = false;
+                let text = "";
+                let color = "";
+                
+                if (winnerType === TYPE_ROCK) { text = "ROCK SUPREMACY"; color = COLORS[TYPE_ROCK]; }
+                if (winnerType === TYPE_PAPER) { text = "PAPER DOMINANCE"; color = COLORS[TYPE_PAPER]; }
+                if (winnerType === TYPE_SCISSOR) { text = "SCISSOR VICTORY"; color = COLORS[TYPE_SCISSOR]; }
+
+                this.winnerText.textContent = text;
+                this.winnerText.style.color = color;
+                this.victoryScreen.classList.add('active');
+            }
+        }
+
+        // Start game on load
+        const game = new Game();
+
+    </script>
+</body>
+</html>
